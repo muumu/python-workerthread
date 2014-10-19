@@ -5,7 +5,7 @@
 from __future__ import print_function
 import sys
 sys.path.append('../')
-from workerthread import WorkersExclusiveQueue
+from workerthread import WorkersExclusiveQueue, WorkersSharedQueue
 import threading
 from threading import Thread, Lock
 import signal
@@ -46,19 +46,36 @@ def handler(workers, signum, frame):
     sys.exit(0)
 
 if __name__ == '__main__':
-    workers = WorkersExclusiveQueue(num_worker_threads)
-    for i in range(len(workers)):
-        workers.set_jobparam(MyResource(i), i)
-    for i in range(len(workers)):
-        workers.post(prepare, i)
-    signal.signal(signal.SIGINT, partial(handler, workers))
-    while True:
-        for i in range(2 * num_worker_threads):
-            workers.post(partial(do_job, generate_data()), i % num_worker_threads)
+    mode = 0
+    if mode == 0:
+        workers = WorkersExclusiveQueue(num_worker_threads)
+        for i in range(len(workers)):
+            workers.set_jobparam(MyResource(i), i)
+        for i in range(len(workers)):
+            workers.post(prepare, i)
+        signal.signal(signal.SIGINT, partial(handler, workers))
+        while True:
+            for i in range(2 * num_worker_threads):
+                workers.post(partial(do_job, generate_data()), i % num_worker_threads)
+            workers.join()
+            time.sleep(0.5)
+            display('If you want to stop posting jobs, input Ctrl-C')
+            time.sleep(1)
         workers.join()
-        time.sleep(0.5)
-        display('If you want to stop posting jobs, input Ctrl-C')
-        time.sleep(1)
-    workers.join()
+    else:
+        workers = WorkersSharedQueue(num_worker_threads)
+        for i in range(len(workers)):
+            workers.set_jobparam(MyResource(i), i)
+        for i in range(len(workers)):
+            workers.post(prepare)
+        signal.signal(signal.SIGINT, partial(handler, workers))
+        while True:
+            for i in range(2 * num_worker_threads):
+                workers.post(partial(do_job, generate_data()))
+            workers.join()
+            time.sleep(0.5)
+            display('If you want to stop posting jobs, input Ctrl-C')
+            time.sleep(1)
+        workers.join()
 
 

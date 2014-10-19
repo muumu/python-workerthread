@@ -22,7 +22,7 @@ class WorkersSharedQueue:
         self.queue = Queue()
         self.workers = []
         for i in range(num_threads):
-            self.workers.append(Worker(q))
+            self.workers.append(Worker(self.queue))
             t = Thread(target=self.workers[i])
             t.daemon = True
             t.start()
